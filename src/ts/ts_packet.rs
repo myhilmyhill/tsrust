@@ -3,20 +3,22 @@ mod tests;
 
 use std::fmt::*;
 
-pub struct TsPacket {
-    pub bytes: Vec<u8>,
-    pub header: TsHeader,
-    pub adaptation: TsAdaptationField,
-    pub payload: TsPayload,
-}
+pub struct RawBytes(pub [u8; 188]);
 
-impl Debug for TsPacket {
+impl Debug for RawBytes {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        for b in &self.bytes {
-            write!(f, "{:02x} ", b);
+        for b in &self.0 {
+            write!(f, "{:02x} ", b)?;
         }
         write!(f, "\n")
     }
+}
+
+pub struct TsPacket {
+    pub bytes: RawBytes,
+    // pub header: TsHeader,
+    // pub adaptation: TsAdaptationField,
+    // pub payload: TsPayload,
 }
 
 #[derive(Debug)]

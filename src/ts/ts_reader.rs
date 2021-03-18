@@ -1,25 +1,37 @@
-use crate::ts::TsPacket;
-use std::io::BufRead;
+#[cfg(test)]
+mod tests;
 
-pub struct TsReader {
-    pub reader: std::io::BufReader<std::fs::File>,
+use super::ts_packet::RawBytes;
+use crate::ts::TsPacket;
+use std::io::Read;
+use BufReader;
+
+pub struct TsReader<R> {
+    pub reader: BufReader<R>,
 }
 
-impl Iterator for TsReader {
+impl<R: Read> TsReader<R> {
+    pub fn new(inner: R) -> TsReader<R> {
+        TsReader {
+            reader: BufReader::new(inner),
+        }
+    }
+}
+
+impl<R: Read> Iterator for TsReader<R> {
     type Item = TsPacket;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut buf: Vec<u8> = Vec::new();
-        let i = self.reader.read_until(b'G', &mut buf);
-        match i {
-            Ok(count) => {
-                if count == 188 {
-                    Some(TsPacket { bytes: buf })
-                } else {
-                    self.next()
-                }
-            }
-            Err(_) => None,
+        let mut buf = [0; 188];
+        let reader = &mut self.reader;
+
+        if reader.read_exact(&mut buf).is_ok() && buf[0] == b'G' {
+            Some(TsPacket {
+                bytes: RawBytes(buf),
+            })
+        } else {
+            dbg!(RawBytes(buf));
+            None
         }
     }
 }
