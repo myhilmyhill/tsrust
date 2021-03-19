@@ -3,22 +3,23 @@ mod tests;
 
 use std::fmt::*;
 
-pub struct RawBytes(pub [u8; 188]);
+pub struct RawBytes<T: IntoIterator<Item = u8>>(pub T);
 
-impl Debug for RawBytes {
+impl<T: IntoIterator<Item = u8> + Clone> Debug for RawBytes<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        for b in &self.0 {
+        for b in self.0.clone() {
             write!(f, "{:02x} ", b)?;
         }
-        write!(f, "\n")
+        Ok(())
     }
 }
 
+#[derive(Debug)]
 pub struct TsPacket {
-    pub bytes: RawBytes,
-    // pub header: TsHeader,
-    // pub adaptation: TsAdaptationField,
-    // pub payload: TsPayload,
+    pub bytes: RawBytes<Vec<u8>>,
+    pub header: TsHeader,
+    // pub adaptation: Option<TsAdaptationField>,
+    // pub payload: Option<TsPayload>,
 }
 
 #[derive(Debug)]
@@ -30,14 +31,13 @@ pub struct TsHeader {
     pub tsc: u8,  // 2 bit
     pub afc: u8,  // 2 bit
     pub cc: u8,   // 4 bit
-    pub bytes: Vec<u8>,
+    pub bytes: RawBytes<Vec<u8>>,
 }
 
-impl From<Vec<u8>> for TsHeader {
-    fn from(bytes: Vec<u8>) -> Self {
-        let header = vec![bytes[0], bytes[1], bytes[2]];
+impl From<&[u8]> for TsHeader {
+    fn from(header: &[u8]) -> Self {
         TsHeader {
-            bytes,
+            bytes: RawBytes(header.to_vec()),
             tei: header[0] >> 7 == 1,
             pusi: header[0] >> 6 & 1 == 1,
             tp: header[0] >> 5 & 1 == 1,
@@ -49,10 +49,43 @@ impl From<Vec<u8>> for TsHeader {
     }
 }
 
-pub struct TsAdaptationField {
-    pub bytes: Vec<u8>,
-}
+// #[derive(Debug)]
+// pub struct TsAdaptationField {
+//     pub length: u8,
+//     pub bytes: RawBytes<Vec<u8>>,
+// }
 
-pub struct TsPayload {
-    pub bytes: Vec<u8>,
-}
+// #[derive(Debug)]
+// pub struct TsPayload {
+//     pub length: u8,
+//     pub bytes: RawBytes<Vec<u8>>,
+// }
+
+// fn try_get_adaptation(afc: u8, bytes: &Vec<u8>) -> Option<TsAdaptationField> {
+//     if afc >> 1 == 1 {
+//         let length = bytes[3];
+//         Some(TsAdaptationField {
+//             length,
+//             bytes: RawBytes(bytes[3..length.into()].to_vec()),
+//         })
+//     } else {
+//         None
+//     }
+// }
+
+// fn try_get_payload(
+//     afc: u8,
+//     bytes: &Vec<u8>,
+//     adaptation: &Option<TsAdaptationField>,
+// ) -> Option<TsPayload> {
+//     match afc {
+//         0b11 => Some(TsPayload {
+//             length: 188 - 24 - adaptation.unwrap().length,
+//             bytes: RawBytes(bytes[adaptation.unwrap().length.into()..].to_vec()),
+//         }),
+//         0b01 => Some(TsPayload {
+//             length: 188 - 24,
+//             bytes: RawBytes(bytes[3..].to_vec()),
+//         }),
+//     }
+// }
