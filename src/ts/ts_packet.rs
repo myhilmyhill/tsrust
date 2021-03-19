@@ -10,7 +10,7 @@ impl<T: IntoIterator<Item = u8> + Clone> Debug for RawBytes<T> {
         for b in self.0.clone() {
             write!(f, "{:02x} ", b)?;
         }
-        Ok(())
+        write!(f, "\x08") // backspace
     }
 }
 
@@ -18,8 +18,8 @@ impl<T: IntoIterator<Item = u8> + Clone> Debug for RawBytes<T> {
 pub struct TsPacket {
     pub bytes: RawBytes<Vec<u8>>,
     pub header: TsHeader,
-    // pub adaptation: Option<TsAdaptationField>,
-    // pub payload: Option<TsPayload>,
+    pub adaptation: Option<TsAdaptationField>,
+    pub payload: Option<TsPayload>,
 }
 
 #[derive(Debug)]
@@ -34,6 +34,7 @@ pub struct TsHeader {
     pub bytes: RawBytes<Vec<u8>>,
 }
 
+/// * `bytes` - ommited sync byte
 impl From<&[u8]> for TsHeader {
     fn from(header: &[u8]) -> Self {
         TsHeader {
@@ -49,43 +50,47 @@ impl From<&[u8]> for TsHeader {
     }
 }
 
-// #[derive(Debug)]
-// pub struct TsAdaptationField {
-//     pub length: u8,
-//     pub bytes: RawBytes<Vec<u8>>,
-// }
+#[derive(Debug)]
+pub struct TsAdaptationField {
+    pub length: u8,
+    pub bytes: RawBytes<Vec<u8>>,
+}
 
-// #[derive(Debug)]
-// pub struct TsPayload {
-//     pub length: u8,
-//     pub bytes: RawBytes<Vec<u8>>,
-// }
+#[derive(Debug)]
+pub struct TsPayload {
+    pub length: u8,
+    pub bytes: RawBytes<Vec<u8>>,
+}
 
-// fn try_get_adaptation(afc: u8, bytes: &Vec<u8>) -> Option<TsAdaptationField> {
-//     if afc >> 1 == 1 {
-//         let length = bytes[3];
-//         Some(TsAdaptationField {
-//             length,
-//             bytes: RawBytes(bytes[3..length.into()].to_vec()),
-//         })
-//     } else {
-//         None
-//     }
-// }
+/// * `bytes` - ommited header
+pub fn try_get_adaptation(afc: u8, bytes: &[u8]) -> Option<TsAdaptationField> {
+    if afc >> 1 == 1 {
+        let length = bytes[0] + 1;
+        Some(TsAdaptationField {
+            length,
+            bytes: RawBytes(bytes[0..length.into()].to_vec()),
+        })
+    } else {
+        None
+    }
+}
 
-// fn try_get_payload(
-//     afc: u8,
-//     bytes: &Vec<u8>,
-//     adaptation: &Option<TsAdaptationField>,
-// ) -> Option<TsPayload> {
-//     match afc {
-//         0b11 => Some(TsPayload {
-//             length: 188 - 24 - adaptation.unwrap().length,
-//             bytes: RawBytes(bytes[adaptation.unwrap().length.into()..].to_vec()),
-//         }),
-//         0b01 => Some(TsPayload {
-//             length: 188 - 24,
-//             bytes: RawBytes(bytes[3..].to_vec()),
-//         }),
-//     }
-// }
+/// * `bytes` - ommited header
+pub fn try_get_payload(
+    afc: u8,
+    bytes: &[u8],
+    adaptation: &Option<TsAdaptationField>,
+) -> Option<TsPayload> {
+    if afc & 1 == 1 {
+        let len_adaptation = match adaptation {
+            Some(e) => e.length,
+            None => 0,
+        };
+        Some(TsPayload {
+            length: 188 - 4 - len_adaptation,
+            bytes: RawBytes(bytes[len_adaptation.into()..].to_vec()),
+        })
+    } else {
+        None
+    }
+}

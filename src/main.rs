@@ -11,7 +11,7 @@ fn main() -> std::io::Result<()> {
     let file = File::open(path)?;
     let reader = TsReader::new(file);
     for i in reader {
-        println!("{:?}", i);
+        println!("{:#?}", i);
     }
     Ok(())
 }

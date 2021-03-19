@@ -1,6 +1,7 @@
-use super::{TsReader};
-use std::io::{Cursor};
+use super::TsReader;
+use std::io::Cursor;
 use std::iter;
+use File;
 
 #[test]
 fn drops_loss_packet() {
@@ -52,4 +53,13 @@ fn reads_packets_over_buffer_size() {
 
     let result = header.next();
     assert_eq!(result.is_none(), true);
+}
+
+#[test]
+#[ignore]
+fn reads_file() -> std::io::Result<()> {
+    let file = File::open("test.ts")?;
+    let reader = TsReader::new(file);
+    for _ in reader {}
+    Ok(())
 }

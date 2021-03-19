@@ -1,7 +1,10 @@
 #[cfg(test)]
 mod tests;
 
+use super::ts_packet::try_get_adaptation;
+use super::ts_packet::try_get_payload;
 use super::ts_packet::RawBytes;
+use super::TsHeader;
 use crate::ts::TsPacket;
 use std::io::Read;
 use BufReader;
@@ -26,9 +29,13 @@ impl<R: Read> Iterator for TsReader<R> {
         let reader = &mut self.reader;
 
         if reader.read_exact(&mut buf).is_ok() && buf[0] == b'G' {
+            let header = TsHeader::from(&buf[1..4]);
+            let adaptation = try_get_adaptation(header.afc, &buf[4..]);
             Some(TsPacket {
                 bytes: RawBytes(buf.to_vec()),
-                header: buf[1..4].into(),
+                payload: try_get_payload(header.afc, &buf[4..], &adaptation),
+                header,
+                adaptation,
             })
         } else {
             dbg!(RawBytes(buf.to_vec()));

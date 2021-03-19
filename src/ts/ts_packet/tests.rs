@@ -141,3 +141,68 @@ fn reads_cc() {
         assert_eq!(p.expected, header.cc);
     }
 }
+
+#[test]
+fn reads_adaptation_field_without_payload() {
+    let bytes = [2u8, 0x00, 0x00];
+    let adaptation = try_get_adaptation(0b10, &bytes);
+    assert!(adaptation.is_some());
+    assert_eq!(adaptation.unwrap().length, 3);
+}
+
+#[test]
+fn reads_adaptation_field_with_payload() {
+    let bytes = [1u8, 0x00, 0x00];
+    let adaptation = try_get_adaptation(0b11, &bytes);
+    assert!(adaptation.is_some());
+    assert_eq!(adaptation.unwrap().length, 2);
+}
+
+#[test]
+fn skips_adaptation_field_without_payload() {
+    let bytes = [];
+    let adaptation = try_get_adaptation(0b00, &bytes);
+    assert!(adaptation.is_none());
+}
+
+#[test]
+fn skips_adaptation_field_with_payload() {
+    let bytes = [];
+    let adaptation = try_get_adaptation(0b01, &bytes);
+    assert!(adaptation.is_none());
+}
+
+#[test]
+fn reads_payload_with_adaptation_field() {
+    let bytes = [0u8; 188 - 4];
+    let adaptation = try_get_adaptation(0b11, &bytes);
+    let payload = try_get_payload(0b11, &bytes, &adaptation);
+    assert_eq!(payload.is_some(), true);
+    assert_eq!(payload.unwrap().length, 188 - 4 - 1);
+}
+
+#[test]
+fn reads_payload_without_adaptation_field() {
+    let bytes = [0u8; 188 - 4];
+    let adaptation = try_get_adaptation(0b01, &bytes);
+    let payload = try_get_payload(0b01, &bytes, &adaptation);
+    assert!(payload.is_some());
+    assert_eq!(payload.unwrap().length, 188 - 4);
+}
+
+#[test]
+fn skips_payload_with_adaptation_field() {
+    let bytes = [0u8; 188 - 4];
+    let adaptation = try_get_adaptation(0b10, &bytes);
+    let payload = try_get_payload(0b10, &bytes, &adaptation);
+    assert!(payload.is_none());
+}
+
+
+#[test]
+fn skips_payload_without_adaptation_field() {
+    let bytes = [0u8; 188 - 4];
+    let adaptation = try_get_adaptation(0b00, &bytes);
+    let payload = try_get_payload(0b00, &bytes, &adaptation);
+    assert!(payload.is_none());
+}
