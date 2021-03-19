@@ -4,42 +4,42 @@ use super::*;
 fn reads_tei_as_true() {
     let bytes = [0x80u8, 0x00, 0x00];
     let header = TsHeader::from(&bytes[..]);
-    assert_eq!(true, header.tei);
+    assert!(header.tei);
 }
 
 #[test]
 fn reads_tei_as_false() {
     let bytes = [0x00u8, 0x00, 0x00];
     let header = TsHeader::from(&bytes[..]);
-    assert_eq!(false, header.tei);
+    assert!(!header.tei);
 }
 
 #[test]
 fn reads_pusi_as_true() {
     let bytes = [0x40u8, 0x00, 0x00];
     let header = TsHeader::from(&bytes[..]);
-    assert_eq!(true, header.pusi);
+    assert!(header.pusi);
 }
 
 #[test]
 fn reads_pusi_as_false() {
     let bytes = [0x00u8, 0x00, 0x00];
     let header = TsHeader::from(&bytes[..]);
-    assert_eq!(false, header.pusi);
+    assert!(!header.pusi);
 }
 
 #[test]
 fn reads_tp_as_true() {
     let bytes = [0x20u8, 0x00, 0x00];
     let header = TsHeader::from(&bytes[..]);
-    assert_eq!(true, header.tp);
+    assert!(header.tp);
 }
 
 #[test]
 fn reads_tp_as_false() {
     let bytes = [0x00u8, 0x00, 0x00];
     let header = TsHeader::from(&bytes[..]);
-    assert_eq!(false, header.tp);
+    assert!(!header.tp);
 }
 
 #[test]
@@ -59,7 +59,7 @@ fn reads_pid() {
         },
     ] {
         let header = TsHeader::from(&p.bytes[..]);
-        assert_eq!(p.expected, header.pid);
+        assert_eq!(header.pid, p.expected);
     }
 }
 
@@ -88,7 +88,7 @@ fn reads_tsc() {
         },
     ] {
         let header = TsHeader::from(&p.bytes[..]);
-        assert_eq!(p.expected, header.tsc);
+        assert_eq!(header.tsc, p.expected);
     }
 }
 
@@ -117,7 +117,7 @@ fn reads_afc() {
         },
     ] {
         let header = TsHeader::from(&p.bytes[..]);
-        assert_eq!(p.expected, header.afc);
+        assert_eq!(header.afc, p.expected);
     }
 }
 
@@ -138,7 +138,7 @@ fn reads_cc() {
         },
     ] {
         let header = TsHeader::from(&p.bytes[..]);
-        assert_eq!(p.expected, header.cc);
+        assert_eq!(header.cc, p.expected);
     }
 }
 
@@ -197,7 +197,6 @@ fn skips_payload_with_adaptation_field() {
     let payload = try_get_payload(0b10, &bytes, &adaptation);
     assert!(payload.is_none());
 }
-
 
 #[test]
 fn skips_payload_without_adaptation_field() {

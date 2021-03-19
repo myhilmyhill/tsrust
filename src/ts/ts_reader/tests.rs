@@ -9,7 +9,7 @@ fn drops_loss_packet() {
     let cursor = Cursor::new(bytes);
     let mut header = TsReader::new(cursor);
     let result = header.next();
-    assert_eq!(result.is_none(), true);
+    assert!(result.is_none());
 }
 
 #[test]
@@ -18,7 +18,7 @@ fn drops_unsync_packet() {
     let cursor = Cursor::new(bytes);
     let mut header = TsReader::new(cursor);
     let result = header.next();
-    assert_eq!(result.is_none(), true);
+    assert!(result.is_none());
 }
 
 #[test]
@@ -28,11 +28,11 @@ fn reads_one_packet() {
     let mut header = TsReader::new(cursor);
 
     let result = header.next();
-    assert_eq!(result.is_some(), true);
+    assert!(result.is_some());
     assert!(result.unwrap().bytes.0.iter().eq(bytes.iter()));
 
     let result = header.next();
-    assert_eq!(result.is_none(), true);
+    assert!(result.is_none());
 }
 
 #[test]
@@ -47,12 +47,12 @@ fn reads_packets_over_buffer_size() {
 
     for _ in 0..n {
         let result = header.next();
-        assert_eq!(result.is_some(), true);
+        assert!(result.is_some());
         assert!(result.unwrap().bytes.0.iter().eq(packet.iter()));
     }
 
     let result = header.next();
-    assert_eq!(result.is_none(), true);
+    assert!(result.is_none());
 }
 
 #[test]
