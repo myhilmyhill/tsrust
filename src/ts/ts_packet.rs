@@ -22,6 +22,25 @@ pub struct TsPacket {
     pub payload: Option<TsPayload>,
 }
 
+impl TsPacket {
+    pub fn try_new(buf: impl Into<Vec<u8>>) -> Option<Self> {
+        let bytes = buf.into();
+        if bytes.len() == 188 && bytes[0] == b'G' {
+            let header = TsHeader::from(&bytes[1..4]);
+            let adaptation = try_get_adaptation(header.afc, &bytes[4..]);
+            Some(TsPacket {
+                payload: try_get_payload(header.afc, &bytes[4..], &adaptation),
+                bytes: RawBytes(bytes),
+                header,
+                adaptation,
+            })
+        } else {
+            dbg!(RawBytes(bytes));
+            None
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct TsHeader {
     pub tei: bool,
@@ -63,7 +82,8 @@ pub struct TsPayload {
 }
 
 /// * `bytes` - ommited header
-pub fn try_get_adaptation(afc: u8, bytes: &[u8]) -> Option<TsAdaptationField> {
+pub fn try_get_adaptation(afc: u8, bytes: impl Into<Vec<u8>>) -> Option<TsAdaptationField> {
+    let bytes = bytes.into();
     if afc >> 1 == 1 {
         let length = bytes[0] + 1;
         Some(TsAdaptationField {
@@ -78,9 +98,10 @@ pub fn try_get_adaptation(afc: u8, bytes: &[u8]) -> Option<TsAdaptationField> {
 /// * `bytes` - ommited header
 pub fn try_get_payload(
     afc: u8,
-    bytes: &[u8],
+    bytes: impl Into<Vec<u8>>,
     adaptation: &Option<TsAdaptationField>,
 ) -> Option<TsPayload> {
+    let bytes = bytes.into();
     if afc & 1 == 1 {
         let len_adaptation = match adaptation {
             Some(e) => e.length,
