@@ -25,11 +25,16 @@ impl<R: Read> Iterator for TsReader<R> {
         let mut buf = [0u8; 188];
         let reader = &mut self.reader;
 
-        if reader.read_exact(&mut buf).is_ok() {
-            TsPacket::try_new(buf)
-        } else {
-            dbg!(RawBytes(buf.to_vec()));
+        match reader.read_exact(&mut buf) {
+            Ok(()) => TsPacket::try_new(buf),
+            Err(e) => {
+                let mut buf: Vec<u8> = Vec::new();
+                if reader.read(&mut buf).unwrap() != 0 {
+                    dbg!(e, RawBytes(buf));
+                    panic!();
+                }
                 None
             }
         }
     }
+}
