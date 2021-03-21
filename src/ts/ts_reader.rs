@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use super::ts_packet::RawBytes;
+use crate::rawbytes::RawBytes;
 use crate::ts::TsPacket;
 use std::io::Read;
 use BufReader;
@@ -29,7 +29,7 @@ impl<R: Read> Iterator for TsReader<R> {
             TsPacket::try_new(buf)
         } else {
             dbg!(RawBytes(buf.to_vec()));
-            None
+                None
+            }
         }
     }
-}

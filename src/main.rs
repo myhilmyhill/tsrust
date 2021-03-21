@@ -1,7 +1,7 @@
 use std::env;
 use std::fs::File;
 use std::io::BufReader;
-
+mod rawbytes;
 mod ts;
 use crate::ts::TsReader;
 
