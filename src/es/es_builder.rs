@@ -14,13 +14,13 @@ pub struct EsBuilder {
 
 impl EsBuilder {
     /// must have pes packet header
-    pub fn new(packet: &TsPacket) -> Result<Self, &'static str> {
-        if !packet.header.pusi {
+    pub fn new(ts_packet: &TsPacket) -> Result<Self, &'static str> {
+        if !ts_packet.header.pusi {
             return Err("pusi != 1");
         }
-        let pid = packet.header.pid;
-        let current_cc = packet.header.cc;
-        let packet = &packet.payload.as_ref().ok_or("No payload")?.bytes.0;
+        let pid = ts_packet.header.pid;
+        let current_cc = ts_packet.header.cc;
+        let packet = &ts_packet.payload.as_ref().ok_or("No payload")?.bytes.0;
         if !(packet[0] == 0x00u8 && packet[1] == 0x00u8 && packet[2] == 0x01u8) {
             return Err("Not PES");
         }
@@ -28,10 +28,16 @@ impl EsBuilder {
         let length = (packet[4] as u16) << 8 | packet[5] as u16;
         let mut buffer = Vec::new();
         if packet[6] >> 6 == 0b10 {
-            let len_remainder = packet[5 + 3];
+            let len_remainder = packet[5 + 3] as u16;
+            if length == 0 {
+                return Err("Not implemented for PES length == 0");
+            } else if length < 3 || len_remainder > length - 3 {
+                return Err("Wrong PES length");
+            }
+
             buffer.append(&mut packet[(5 + 3 + 1 + len_remainder).into()..].to_vec());
             Ok(EsBuilder {
-                length: length - 3 - len_remainder as u16,
+                length: length - 3 - len_remainder,
                 buffer,
                 pid,
                 stream_id,
@@ -52,17 +58,17 @@ impl EsBuilder {
 
     /// true -> building PES
     /// false -> complete PES
-    pub fn push(&mut self, packet: &TsPacket) -> Result<bool, &str> {
-        if packet.header.pusi {
+    pub fn push(&mut self, ts_packet: &TsPacket) -> Result<bool, &'static str> {
+        if ts_packet.header.pusi {
             return Err("pusi == 1");
         }
-        if packet.header.pid != packet.header.pid {
+        if ts_packet.header.pid != ts_packet.header.pid {
             return Err("Wrong pid");
         }
-        if ((packet.header.cc as u16 + 1u16) & 0x0f) as u8 == packet.header.cc {
+        if ((ts_packet.header.cc as u16 + 1u16) & 0x0f) as u8 == ts_packet.header.cc {
             return Err("Wrong cc due to drop packet");
         }
-        let adding = &packet.payload.as_ref().ok_or("No payload")?.bytes.0;
+        let adding = &ts_packet.payload.as_ref().ok_or("No payload")?.bytes.0;
         let end: i32 = (adding.len() + self.buffer.len()) as i32 - self.length as i32;
         if end < 0 {
             // uncomplete
